@@ -9,7 +9,9 @@
     "auto-skeleton": "./dist/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc",
@@ -20,8 +22,16 @@
     "demo:build": "vite build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build && npm test"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/muzammil328/auto-skeleton-loader-generator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/muzammil328/auto-skeleton-loader-generator/issues"
+  },
+  "homepage": "https://github.com/muzammil328/auto-skeleton-loader-generator#readme",
   "keywords": [
     "skeleton",
     "loader",
@@ -31,7 +41,7 @@
     "ast",
     "codegen"
   ],
-  "author": "",
+  "author": "Muzammal Safdar",
   "license": "MIT",
   "dependencies": {
     "@babel/parser": "^7.26.3",
