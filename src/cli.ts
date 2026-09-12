@@ -3,16 +3,20 @@
 import { Command } from 'commander';
 import { dirname, resolve } from 'node:path';
 import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { parseComponent } from './parser/parseComponent.js';
 import { generateSkeletonFile } from './generator/generateSkeleton.js';
 import { loadConfig } from './config/loadConfig.js';
+
+// Read from package.json so `--version` cannot drift from the published version.
+const { version } = createRequire(import.meta.url)('../package.json') as { version: string };
 
 const program = new Command();
 
 program
   .name('auto-skeleton')
   .description('Auto-generate skeleton loader components from JSX/TSX structure')
-  .version('0.1.0');
+  .version(version);
 
 program
   .command('generate')
