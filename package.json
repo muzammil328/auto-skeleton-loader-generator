@@ -1,6 +1,6 @@
 {
   "name": "auto-skeleton-loader-generator",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Auto-generate skeleton loader components from existing JSX/TSX component structure",
   "type": "module",
   "main": "./dist/index.js",
