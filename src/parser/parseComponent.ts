@@ -5,6 +5,7 @@ import * as t from '@babel/types';
 import { readFileSync } from 'node:fs';
 import { basename, extname } from 'node:path';
 import type { ParseResult, SkeletonNode } from '../index.js';
+import type { SkeletonConfig } from '../config/defaults.js';
 import { inferShape } from '../inference/inferShape.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -45,7 +46,7 @@ function isUppercaseComponent(tag: string | null): boolean {
   return tag !== null && tag[0] === tag[0]?.toUpperCase() && tag[0] !== tag[0]?.toLowerCase();
 }
 
-function jsxToSkeletonNode(path: NodePath<t.JSXElement>): SkeletonNode | null {
+function jsxToSkeletonNode(path: NodePath<t.JSXElement>, config?: SkeletonConfig): SkeletonNode | null {
   const tag = getTagName(path.node.openingElement);
   if (!tag || isUppercaseComponent(tag)) return null;
 
@@ -53,7 +54,7 @@ function jsxToSkeletonNode(path: NodePath<t.JSXElement>): SkeletonNode | null {
   if (!SUPPORTED_TAGS.has(normalizedTag)) return null;
 
   const attrs = getAttrs(path.get('openingElement') as NodePath<t.JSXOpeningElement>);
-  const { shape, width, height } = inferShape(normalizedTag, attrs);
+  const { shape, width, height } = inferShape(normalizedTag, attrs, config);
 
   const children: SkeletonNode[] = [];
   for (const child of path.node.children) {
@@ -63,7 +64,7 @@ function jsxToSkeletonNode(path: NodePath<t.JSXElement>): SkeletonNode | null {
       ) as NodePath<t.JSXElement> | undefined;
 
       if (childPath) {
-        const childNode = jsxToSkeletonNode(childPath);
+        const childNode = jsxToSkeletonNode(childPath, config);
         if (childNode) children.push(childNode);
       }
     }
@@ -117,7 +118,7 @@ function extractComponentName(ast: t.File, filePath: string): string {
   return name;
 }
 
-function findRootJsx(ast: t.File): SkeletonNode[] {
+function findRootJsx(ast: t.File, config?: SkeletonConfig): SkeletonNode[] {
   const nodes: SkeletonNode[] = [];
 
   traverse(ast, {
@@ -126,7 +127,7 @@ function findRootJsx(ast: t.File): SkeletonNode[] {
       if (!arg) return;
 
       if (t.isJSXElement(arg)) {
-        const node = jsxToSkeletonNode(path.get('argument') as NodePath<t.JSXElement>);
+        const node = jsxToSkeletonNode(path.get('argument') as NodePath<t.JSXElement>, config);
         if (node) nodes.push(node);
       } else if (t.isJSXFragment(arg)) {
         for (const child of arg.children) {
@@ -136,7 +137,7 @@ function findRootJsx(ast: t.File): SkeletonNode[] {
             ) as NodePath<t.JSXElement> | undefined;
 
             if (childPath) {
-              const node = jsxToSkeletonNode(childPath);
+              const node = jsxToSkeletonNode(childPath, config);
               if (node) nodes.push(node);
             }
           }
@@ -148,7 +149,7 @@ function findRootJsx(ast: t.File): SkeletonNode[] {
   return nodes;
 }
 
-export function parseComponent(filePath: string): ParseResult {
+export function parseComponent(filePath: string, config?: SkeletonConfig): ParseResult {
   const source = readFileSync(filePath, 'utf-8');
   const ext = extname(filePath).toLowerCase();
 
@@ -160,7 +161,7 @@ export function parseComponent(filePath: string): ParseResult {
   });
 
   const componentName = extractComponentName(ast, filePath);
-  const nodes = findRootJsx(ast);
+  const nodes = findRootJsx(ast, config);
 
   return {
     componentName,

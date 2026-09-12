@@ -5,6 +5,13 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "bin": {
     "auto-skeleton": "./dist/cli.js"
   },
@@ -48,6 +55,14 @@
     "@babel/traverse": "^7.26.5",
     "@babel/types": "^7.26.3",
     "commander": "^12.1.0"
+  },
+  "peerDependencies": {
+    "react": ">=17"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/babel__traverse": "^7.20.7",

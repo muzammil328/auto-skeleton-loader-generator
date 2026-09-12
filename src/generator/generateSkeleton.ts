@@ -1,6 +1,8 @@
-import { writeFileSync } from 'node:fs';
-import { dirname, join, basename, extname } from 'node:path';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join, basename, extname, resolve } from 'node:path';
 import type { ParseResult, SkeletonNode } from '../index.js';
+import type { SkeletonConfig } from '../config/defaults.js';
+import { DEFAULT_CONFIG } from '../config/defaults.js';
 
 const SKELETON_CSS = `
 .skeleton {
@@ -95,13 +97,30 @@ export default ${skeletonName};
 `;
 }
 
-export function generateSkeletonFile(result: ParseResult, outputPath?: string): string {
-  const content = generateSkeleton(result);
+/** Resolves where a skeleton is written: explicit path, then config, then next to the source. */
+export function resolveOutputPath(
+  result: ParseResult,
+  outputPath?: string,
+  config: SkeletonConfig = DEFAULT_CONFIG,
+): string {
+  if (outputPath) return resolve(outputPath);
+
   const ext = extname(result.sourceFile);
   const base = basename(result.sourceFile, ext);
-  const dir = dirname(result.sourceFile);
+  const dir = config.output.dir ? resolve(config.output.dir) : dirname(result.sourceFile);
 
-  const outPath = outputPath ?? join(dir, `${base}.skeleton${ext}`);
+  return join(dir, `${base}${config.output.suffix}${ext}`);
+}
+
+export function generateSkeletonFile(
+  result: ParseResult,
+  outputPath?: string,
+  config: SkeletonConfig = DEFAULT_CONFIG,
+): string {
+  const content = generateSkeleton(result);
+  const outPath = resolveOutputPath(result, outputPath, config);
+
+  mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, content, 'utf-8');
 
   return outPath;

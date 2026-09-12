@@ -32,11 +32,19 @@ A tool/package that:
 #### Target API
 
 ```jsx
-import { withSkeleton } from 'auto-skeleton';
+import { withSkeleton } from 'auto-skeleton-loader-generator/react';
 import UserCard from './UserCard';
+import UserCardSkeleton from './UserCard.skeleton';
 
-export default withSkeleton(UserCard);
+export default withSkeleton(UserCard, UserCardSkeleton);
 ```
+
+> **Revised September 12, 2026.** The original single-argument form
+> `withSkeleton(UserCard)` cannot work: inference is a Babel AST pass over the
+> *source file*, and in the browser there is no source file and no
+> `@babel/parser`. Resolving the pair automatically needs a bundler plugin —
+> Phase 3 scope. A CLI `--hoc` flag keeps the call site to one line in the
+> meantime.
 
 ```bash
 npx auto-skeleton generate ./src/components/UserCard.jsx
@@ -62,9 +70,9 @@ npx auto-skeleton generate ./src/components/UserCard.jsx
 - [x] Support basic JSX elements: `div`, `img`, `p`, `span`, `h1`–`h6`, `button`
 - [x] Output a static skeleton component (no runtime magic yet)
 
-#### Phase 2
+#### Phase 2 — in progress
 - [ ] `withSkeleton()` HOC for automatic runtime swapping (loading state → real component)
-- [ ] Config file for customizing shape mapping (e.g. treat all `<img>` as circles vs rectangles)
+- [x] Config file for customizing shape mapping (e.g. treat all `<img>` as circles vs rectangles)
 - [ ] Theming support (colors, animation speed, dark mode)
 
 #### Phase 3
@@ -89,6 +97,7 @@ npx auto-skeleton generate ./src/components/UserCard.jsx
 | AST parsing | `@babel/parser` + `@babel/traverse` |
 | Language | TypeScript throughout |
 | CLI | `commander` |
+| Config | `.auto-skeletonrc` (JSON) or `package.json#autoSkeleton` |
 | Testing | Vitest |
 | Styling (v0.1) | Plain CSS (embedded in generated output) |
 | Styling (planned) | Optional Tailwind CSS output mode |
@@ -106,7 +115,7 @@ npx auto-skeleton generate ./src/components/UserCard.jsx
 
 **v0.1 default:** plain CSS — no Tailwind setup needed. Generated skeletons are self-contained and copy-paste ready.
 
-**Phase 2 plan:** add `--style tailwind` flag or `.auto-skeletonrc` option:
+**Phase 2 plan:** the `.auto-skeletonrc` config landed in step 2.2 (`style` key typed and validated); the `--style tailwind` renderer arrives in step 2.5:
 
 ```bash
 npx auto-skeleton generate ./UserCard.jsx --style tailwind
@@ -204,7 +213,7 @@ The demo app imports the generated `.skeleton.jsx` files and renders them with a
 #### Known Limitations (v0.1)
 
 - **No runtime HOC** — `withSkeleton()` is planned for Phase 2
-- **No config file** — shape mapping is hardcoded
+- **No config file** — shape mapping is hardcoded *(fixed in v0.2.0 — see below)*
 - **Plain CSS only** — no Tailwind output mode yet; generated files embed their own `<style>` block
 - **No theming** — generated skeleton uses default gray pulse animation
 - **Mapped lists ignored** — `{items.map(...)}` inside JSX is not expanded; only static structure is parsed
@@ -221,16 +230,57 @@ The demo app imports the generated `.skeleton.jsx` files and renders them with a
 
 ---
 
-### Upcoming — v0.2.0 (Phase 2 Preview)
+### v0.2.0 — Phase 2, step 2.2 (current)
 
-Planned features:
+**Release date:** September 12, 2026
+**Status:** Config layer shipped; the rest of Phase 2 is still in progress
 
-- `withSkeleton(Component, options?)` HOC
-- `.auto-skeletonrc` config for custom shape mappings
-- `--style tailwind` output mode (Tailwind utility classes instead of embedded CSS)
-- Theme tokens (color, animation speed, border radius)
-- Dark mode variant in generated CSS / Tailwind `dark:` classes
+#### What's Included
+
+| Step | Work | Status |
+|---|---|---|
+| 2.1 | Package split — `exports` map, React as an optional peer dependency, `jsx: react-jsx` in tsconfig | ⚙️ Prep done |
+| 2.2 | Config layer — `.auto-skeletonrc`, `package.json#autoSkeleton`, CLI `--config` | ✅ Complete |
+
+**2.2 detail.** `src/config/defaults.ts` (types, `DEFAULT_CONFIG`, `mergeConfig`, `validateConfig`) and `src/config/loadConfig.ts` (directory walking, precedence). Config threads through `inferShape(tag, attrs, config?)` → `parseComponent(file, config?)` → `generateSkeletonFile(result, out?, config?)` → CLI `-c, --config`. Every new parameter is optional and trailing, so existing calls are unchanged; regenerating all three samples without a config yields a zero diff.
+
+```jsonc
+{
+  "style": "css",                    // typed + validated; consumed in 2.5
+  "output": { "suffix": ".skeleton", "dir": null },
+  "theme": {                         // typed + validated; consumed in 2.3
+    "baseColor": "#e0e0e0",
+    "highlightColor": "#f0f0f0",
+    "borderRadius": "4px",
+    "animationDuration": "1.5s",
+    "dark": { "baseColor": "#1f2937", "highlightColor": "#374151" }
+  },
+  "shapes": {
+    "img": "rectangle",
+    "img.avatar": { "shape": "circle", "width": "48px", "height": "48px" },
+    "h1": { "height": "40px" }
+  }
+}
+```
+
+`shapes` keys are `tag` or `tag.className-hint`, which turns the two hardcoded hints (`avatar`/`rounded-full`, `short`) into data. A rule overrides only the fields it names; hint rules beat bare tag rules.
+
+Tests: 33 passing (16 inference, 17 config).
+
+> The `./react` subpath export is deliberately **not** in `package.json` yet — pointing it at a `src/runtime/` that does not exist would break `npm publish`. It lands with the HOC in 2.6.
+
+#### Still to do for v0.2.0
+
+| Step | Work |
+|---|---|
+| 2.3 | Renderer refactor (`renderers/css.ts` + `renderers/tailwind.ts`) and theme interpolation |
+| 2.4 | Dark mode + `prefers-reduced-motion` in generated CSS |
+| 2.5 | `--style tailwind` output mode |
+| 2.6 | `withSkeleton(Component, Skeleton, options?)` HOC, `./react` export, CLI `--hoc` |
+| 2.7 | Tests, demo loading toggle, docs pages, release |
+
+Steps 2.3–2.6 land in follow-up releases; the HOC and Tailwind mode are the headline items for **v0.3.0**.
 
 ---
 
-*This file is the single source of truth for project vision and version history. Update the "Current Version" section with each release.*
+*This file is the single source of truth for project vision and version history. Update it with each release, and as Phase 2 steps land.*

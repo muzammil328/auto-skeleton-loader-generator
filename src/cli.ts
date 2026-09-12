@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { parseComponent } from './parser/parseComponent.js';
 import { generateSkeletonFile } from './generator/generateSkeleton.js';
+import { loadConfig } from './config/loadConfig.js';
 
 const program = new Command();
 
@@ -18,7 +19,8 @@ program
   .description('Generate a skeleton component from a source component file')
   .argument('<file>', 'Path to the JSX/TSX component file')
   .option('-o, --output <path>', 'Output file path (default: <Component>.skeleton.jsx)')
-  .action((file: string, options: { output?: string }) => {
+  .option('-c, --config <path>', 'Path to a config file (default: nearest .auto-skeletonrc)')
+  .action((file: string, options: { output?: string; config?: string }) => {
     const filePath = resolve(file);
 
     if (!existsSync(filePath)) {
@@ -33,12 +35,22 @@ program
     }
 
     try {
-      const result = parseComponent(filePath);
-      const outPath = generateSkeletonFile(result, options.output ? resolve(options.output) : undefined);
+      const { config, filePath: configPath } = loadConfig({
+        cwd: dirname(filePath),
+        configPath: options.config,
+      });
+
+      const result = parseComponent(filePath, config);
+      const outPath = generateSkeletonFile(
+        result,
+        options.output ? resolve(options.output) : undefined,
+        config,
+      );
 
       console.log(`✓ Generated skeleton: ${outPath}`);
       console.log(`  Component: ${result.componentName}Skeleton`);
       console.log(`  Elements detected: ${countNodes(result.nodes)}`);
+      if (configPath) console.log(`  Config: ${configPath}`);
     } catch (err) {
       console.error('Error generating skeleton:', err instanceof Error ? err.message : err);
       process.exit(1);
